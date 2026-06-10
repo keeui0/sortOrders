@@ -75,6 +75,11 @@ function handleFileUpload(event, type) {
 function reprocessAllData() {
     combinedData = {}; // 데이터 초기화
     if (rawGoogleData) {
+        // 진단: 업로드된 Google JSON의 최상위 구조 노출
+        console.info('[reprocess] rawGoogleData type:', Array.isArray(rawGoogleData) ? `Array(${rawGoogleData.length})` : typeof rawGoogleData);
+        if (!Array.isArray(rawGoogleData)) {
+            console.info('[reprocess] rawGoogleData keys:', Object.keys(rawGoogleData));
+        }
         const googleData = parseGoogleData(rawGoogleData);
         mergeData(googleData);
     }
@@ -85,6 +90,26 @@ function reprocessAllData() {
     if (rawIciumData) {
         const iciumData = parseIciumData(rawIciumData);
         mergeData(iciumData);
+    }
+
+    // 진단: 병합 후 게임별 건수 + 2026-06 항목 존재 여부
+    const summary = Object.entries(combinedData).map(([game, items]) => ({
+        game,
+        count: items.length,
+        latestDate: items.reduce((max, i) => i.date > max ? i.date : max, new Date(0)).toISOString().slice(0, 10)
+    }));
+    console.info('[reprocess] 게임별 집계:', summary);
+
+    const all2026Jun = Object.values(combinedData).flat().filter(i =>
+        i.date.getFullYear() === 2026 && i.date.getMonth() === 5
+    );
+    console.info(`[reprocess] 2026-06 항목 수: ${all2026Jun.length}`);
+    if (all2026Jun.length > 0) {
+        console.info('[reprocess] 2026-06 샘플:', all2026Jun.slice(0, 5).map(i => ({
+            date: i.date.toISOString().slice(0, 10),
+            title: i.title,
+            price: i.price
+        })));
     }
     
     if (Object.keys(combinedData).length > 0) {
