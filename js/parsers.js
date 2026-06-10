@@ -68,13 +68,6 @@ function parseGoogleData(orders) {
     const processedData = {};
     let skipped = 0;
 
-    // 진단용: 첫 주문과 마지막 주문의 원본 구조를 한 번씩 노출
-    if (orders.length > 0) {
-        console.info('[parseGoogleData] 총 주문 수:', orders.length);
-        console.info('[parseGoogleData] 첫 주문 샘플:', JSON.stringify(orders[0], null, 2));
-        console.info('[parseGoogleData] 마지막 주문 샘플:', JSON.stringify(orders[orders.length - 1], null, 2));
-    }
-
     orders.forEach((item, idx) => {
         const order = item.orderHistory;
         if (!order || !order.lineItem || order.lineItem.length === 0) {

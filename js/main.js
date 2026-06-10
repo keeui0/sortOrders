@@ -808,7 +808,12 @@ function displayOverallStatsChart(data) {
     })).filter(g => g.total > 0);
 
     const topGames = gameTotals.sort((a, b) => b.total - a.total).slice(0, 7);
-    const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#34495e', '#1abc9c'];
+    // '기타'는 미분류 결제의 표시 단서라 top 7에 없더라도 별개 라인으로 항상 노출
+    const otherBucket = gameTotals.find(g => g.name === '기타');
+    if (otherBucket && !topGames.some(g => g.name === '기타')) {
+        topGames.push(otherBucket);
+    }
+    const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#34495e', '#1abc9c', '#95a5a6'];
 
     let chartLabels = [];
     let datasets = [];
