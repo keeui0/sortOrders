@@ -1099,17 +1099,17 @@ function switchAppMode(mode) {
         if (googleBox) googleBox.classList.remove('hidden');
         if (appleBox) appleBox.classList.add('hidden');
         if (iciumBox) iciumBox.classList.add('hidden');
-        mainTitle.innerHTML = '🎮 Google Play 가계부';
+        mainTitle.innerHTML = '📑 Sort Orders · Google Play';
     } else if (mode === 'apple') {
         if (googleBox) googleBox.classList.add('hidden');
         if (appleBox) appleBox.classList.remove('hidden');
         if (iciumBox) iciumBox.classList.add('hidden');
-        mainTitle.innerHTML = '🍎 Apple Store 가계부';
+        mainTitle.innerHTML = '📑 Sort Orders · Apple Store';
     } else {
         if (googleBox) googleBox.classList.remove('hidden');
         if (appleBox) appleBox.classList.remove('hidden');
         if (iciumBox) iciumBox.classList.remove('hidden');
-        mainTitle.innerHTML = '🎮 게이머 가계부 🍎 (통합)';
+        mainTitle.innerHTML = '📑 Sort Orders · 결제 정리함';
     }
 
     // 데이터 재처리 (이미 데이터가 있는 경우 현재 모드에 맞춰 UI 갱신)

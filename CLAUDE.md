@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-게이머 가계부 (Gamer's Expense Tracker) — a static, client-side web app that ingests purchase history files exported from Google Play, Apple Store, and 아이시움 라운지 (Trickcal web shop), normalizes them, and renders combined spending dashboards plus a game-agnostic year-end recap.
+Sort Orders (결제 정리함) — a static, client-side web app that ingests purchase history files exported from Google Play, Apple Store, and 아이시움 라운지 (Trickcal web shop), normalizes them, and renders combined spending dashboards plus a game-agnostic year-end recap. Repo: `keeui0/sortOrders`.
 
 - **Stack**: Vanilla HTML / CSS / JavaScript. Chart.js loaded from CDN. `html2canvas` (CDN) used only by recap. No build step, no package manager, no tests.
 - **Runtime**: Everything runs in the browser; uploaded files never leave the client.

@@ -597,7 +597,7 @@ window.downloadLongReceipt = function() {
                 <div class="barcode" style="font-family:'Libre Barcode 39'; font-size:2em; text-align:center; margin-top:20px;">||| || ||| | ||||</div>
 
                 <div style="text-align:center; margin-top:15px; border-top:1px dotted #ccc; padding-top:10px;">
-                    <div style="font-size:0.8em; color:#555; font-weight:bold;">Gamer's Expense Tracker</div>
+                    <div style="font-size:0.8em; color:#555; font-weight:bold;">Sort Orders · 결제 정리함</div>
                 </div>
             </div>
         </div>
