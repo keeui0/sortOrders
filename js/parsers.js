@@ -20,16 +20,42 @@ function getAppName(title, publisher) {
     return '기타';
 }
 
-function parsePrice(priceStr){
-    if (typeof priceStr !== 'string' || priceStr.trim() === ''){
-        return { amount: 0, currency: '₩' }; 
+// ISO 4217 통화 코드 → 표시용 심볼 매핑.
+const CURRENCY_CODE_TO_SYMBOL = {
+    'KRW': '₩', 'USD': '$', 'JPY': '¥', 'EUR': '€', 'GBP': '£',
+    'CNY': '¥', 'HKD': '$', 'TWD': '$', 'AUD': '$', 'CAD': '$'
+};
+
+// 결제 금액 파싱.
+// 두 가지 입력 형식을 모두 지원합니다:
+//   1) 문자열 형식 (구 Google / Apple / Icium): "₩9,900", "$9.99"
+//   2) 객체 형식 (최근 Google Takeout): { amountMicros: "9900000000", currencyCode: "KRW" }
+function parsePrice(priceInput) {
+    // 객체(신규) 형식
+    if (priceInput && typeof priceInput === 'object') {
+        const micros = priceInput.amountMicros ?? priceInput.priceMicros;
+        if (micros !== undefined && micros !== null) {
+            const amount = (parseFloat(micros) || 0) / 1e6;
+            const code = priceInput.currencyCode || 'KRW';
+            return { amount, currency: CURRENCY_CODE_TO_SYMBOL[code] || code };
+        }
+        // amount/currency 필드를 직접 갖는 형태도 방어적으로 처리
+        if (priceInput.amount !== undefined) {
+            return {
+                amount: parseFloat(priceInput.amount) || 0,
+                currency: CURRENCY_CODE_TO_SYMBOL[priceInput.currencyCode] || priceInput.currency || '₩'
+            };
+        }
+        return { amount: 0, currency: '₩' };
     }
 
-    const currencySymbolMatch = priceStr.match(/[₩$¥€]/);
-    const currency = currencySymbolMatch ? currencySymbolMatch[0] : '₩'; 
-
-    const amount = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
-
+    // 문자열(구) 형식
+    if (typeof priceInput !== 'string' || priceInput.trim() === '') {
+        return { amount: 0, currency: '₩' };
+    }
+    const currencySymbolMatch = priceInput.match(/[₩$¥€£]/);
+    const currency = currencySymbolMatch ? currencySymbolMatch[0] : '₩';
+    const amount = parseFloat(priceInput.replace(/[^0-9.]/g, '')) || 0;
     return { amount, currency };
 }
 
@@ -40,32 +66,55 @@ function parsePrice(priceStr){
  */
 function parseGoogleData(orders) {
     const processedData = {};
-    orders.forEach(item => {
+    let skipped = 0;
+    orders.forEach((item, idx) => {
         const order = item.orderHistory;
-        if (!order || !order.lineItem || order.lineItem.length === 0) return;
-        
-        const priceInfo = parsePrice(order.totalPrice);
-        const refundInfo = parsePrice(order.refundAmount);
+        if (!order || !order.lineItem || order.lineItem.length === 0) {
+            skipped++;
+            return;
+        }
 
-        // 환불 금액이 있으면 순 가격에서 차감
+        // 가격 필드는 최신 Takeout에서 lineItem 안으로 옮겨졌을 수 있어 두 위치를 모두 시도
+        const rawPrice = order.totalPrice
+            ?? order.lineItem[0]?.totalPrice
+            ?? order.lineItem[0]?.amount;
+        const rawRefund = order.refundAmount ?? order.lineItem[0]?.refundAmount;
+
+        const priceInfo = parsePrice(rawPrice);
+        const refundInfo = parsePrice(rawRefund);
         const netPrice = priceInfo.amount - refundInfo.amount;
 
-        if (netPrice <= 0) return;
-        
-        const title = order.lineItem[0].doc.title || "";
-        // Google Takeout JSON에는 documentSubtitle/documentSeller 같은 부가 필드가 있을 수 있어 방어적으로 읽음
-        const publisher = order.lineItem[0].doc.documentSubtitle
-            || order.lineItem[0].doc.documentSeller
+        if (netPrice <= 0) {
+            if (rawPrice) {
+                console.warn('[parseGoogleData] 가격 파싱 실패로 스킵:', { index: idx, rawPrice, parsed: priceInfo });
+            }
+            skipped++;
+            return;
+        }
+
+        const title = order.lineItem[0].doc?.title
+            || order.lineItem[0].title
+            || "";
+        const publisher = order.lineItem[0].doc?.documentSubtitle
+            || order.lineItem[0].doc?.documentSeller
+            || order.lineItem[0].publisher
             || "";
 
-        // [수정됨] UTC 시간을 한국 시간(KST, UTC+9) 기준으로 명확하게 변환
-        // 브라우저의 로컬 시간대에 상관없이 한국 날짜로 고정합니다.
-        const utcDate = new Date(order.creationTime);
-        const kstOffset = 9 * 60 * 60 * 1000; // 9시간 (밀리초)
-        const kstDate = new Date(utcDate.getTime() + kstOffset);
+        // 날짜 필드명 변형(creationTime/orderTime/createTime/purchaseTime) 모두 시도
+        const rawTime = order.creationTime
+            || order.orderTime
+            || order.createTime
+            || order.purchaseTime
+            || order.lineItem[0]?.creationTime;
+        const parsedTime = rawTime ? new Date(rawTime) : null;
+        if (!parsedTime || isNaN(parsedTime.getTime())) {
+            console.warn('[parseGoogleData] 날짜 파싱 실패로 스킵:', { index: idx, rawTime, title });
+            skipped++;
+            return;
+        }
 
-        // KST 기준의 년, 월, 일을 사용하여 Date 객체 생성 (시간은 00:00:00)
-        // getUTCFullYear() 등을 사용하여 변환된 타임스탬프의 UTC 값을 가져오면 KST 날짜가 됨
+        // UTC → KST(UTC+9) 변환 후 날짜 추출 (브라우저 타임존 무관하게 한국 날짜 고정)
+        const kstDate = new Date(parsedTime.getTime() + 9 * 60 * 60 * 1000);
         const date = new Date(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate());
 
         const appName = getAppName(title, publisher || title);
@@ -75,6 +124,9 @@ function parseGoogleData(orders) {
         }
         processedData[appName].push({ date, title, publisher, price: netPrice, currency: priceInfo.currency, source: 'google' });
     });
+    if (skipped > 0) {
+        console.info(`[parseGoogleData] 총 ${skipped}건 스킵됨 (환불·파싱 실패 등). 자세한 내역은 위 경고 참조.`);
+    }
     return processedData;
 }
 
