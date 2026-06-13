@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Sort Orders (결제 정리함) — a static, client-side web app that ingests purchase history files exported from Google Play, Apple Store, and 아이시움 라운지 (Trickcal web shop), normalizes them, and renders combined spending dashboards plus a game-agnostic year-end recap. Repo: `keeui0/sortOrders`.
+Sort Orders (결제 정리함) — a static, client-side web app that ingests purchase history files exported from Google Play and Apple Store, normalizes them, and renders combined spending dashboards plus a game-agnostic year-end recap. Repo: `keeui0/sortOrders`.
 
 - **Stack**: Vanilla HTML / CSS / JavaScript. Chart.js loaded from CDN. `html2canvas` (CDN) used only by recap. No build step, no package manager, no tests.
 - **Runtime**: Everything runs in the browser; uploaded files never leave the client.
@@ -14,14 +14,14 @@ Sort Orders (결제 정리함) — a static, client-side web app that ingests pu
 
 - `index.html` — main SPA. Three modes (`all` / `google` / `apple`) selected via hash routing and the `.nav-link` tabs.
 - `recap.html` — separate year-end recap page (storytelling slides for any selected game or all games combined). Loaded independently; does **not** share state with `index.html`.
-- `js/parsers.js` — shared by both pages. Contains the three platform parsers and helpers.
+- `js/parsers.js` — shared by both pages. Contains the two platform parsers and helpers.
 - `js/appKeywords.js` — single source of truth for game name → keyword mapping used to bucket items into apps.
 - `js/main.js` — controller for `index.html` only.
 - `js/recap.js` — controller for `recap.html` only.
 - `css/style.css` — single stylesheet for every page.
 - `updates.json` — changelog rendered by both pages' update-history modal.
 - `guide/` — HTML guides for exporting purchase history from each platform.
-- `image/` — recap assets. Filename conventions matter (see Recap section).
+- `image/` — README / guide screenshots.
 
 Note: `README.md` lists `google.html` and `apple.html` as separate files, but those pages were merged into `index.html` as SPA modes (see `updates.json` 2026-05-05). The README is out of date on structure.
 
@@ -32,24 +32,23 @@ Every parser produces the same item shape, grouped by app name:
 ```js
 processedData = {
   "<appName>": [
-    { date: Date, title: string, publisher: string, price: number, currency: '₩'|'$'|'¥'|'€', source: 'google'|'apple'|'icium' }
+    { date: Date, title: string, publisher: string, price: number, currency: '₩'|'$'|'¥'|'€', source: 'google'|'apple' }
   ]
 }
 ```
 
 Important conventions:
 
-- **`source` is set by every parser** (`'google'` / `'apple'` / `'icium'`). `getFilteredCombinedData` in `main.js` matches `item.source === appMode`, so all three platforms filter correctly. (Earlier versions of this app omitted `source` on Apple items — don't reintroduce that omission.)
-- **`publisher` is always present but may be empty.** Apple extracts it from `.pli-publisher`; Google reads it defensively from `doc.documentSubtitle` / `doc.documentSeller` (may not exist in older exports); Icium sets it to `''`. The keyword auto-suggestion (`extractAppCandidates`) uses it as the preferred grouping key when available.
-- **Icium data is hardcoded to merge into `'트릭컬 리바이브'`** (see `parseIciumData` in `js/parsers.js`). If you add Trickcal-related sources, decide explicitly where they bucket.
-- **Date normalization differs per platform**: Google uses UTC→KST conversion (`+9h`) so a purchase always lands on its Korean calendar date regardless of the user's timezone; Apple parses `YYYY년 MM월 DD일`; Icium parses `YYYY.MM.DD.`. When adding parsers, follow the Google approach for any UTC source.
-- **App classification** runs through `getAppName(title, publisher)` (parsers.js), which iterates `appKeywords` in declaration order and returns the first match, falling back to `'기타'`. Order matters when a keyword could match multiple games — put the more-specific entry first. Example: `'트릭컬 글로벌 서버'` keyword `'Trickcal'` would also match `'트릭컬 리바이브'` titles, so the declaration order in `appKeywords.js` is load-bearing.
+- **`source` is set by every parser** (`'google'` / `'apple'`). `getFilteredCombinedData` in `main.js` matches `item.source === appMode`, so both platforms filter correctly. (Earlier versions of this app omitted `source` on Apple items — don't reintroduce that omission.)
+- **`publisher` is always present but may be empty.** Apple extracts it from `.pli-publisher`; Google reads it defensively from `doc.documentSubtitle` / `doc.documentSeller` (may not exist in older exports). The keyword auto-suggestion (`extractAppCandidates`) uses it as the preferred grouping key when available.
+- **Date normalization differs per platform**: Google uses UTC→KST conversion (`+9h`) so a purchase always lands on its Korean calendar date regardless of the user's timezone; Apple parses `YYYY년 MM월 DD일`. When adding parsers, follow the Google approach for any UTC source.
+- **App classification** runs through `getAppName(title, publisher)` (parsers.js), which iterates `appKeywords` in declaration order and returns the first match, falling back to `'기타'`. Order matters when a keyword could match multiple games — put the more-specific entry first. Across entries, declare narrower games before broader ones so a broad keyword doesn't swallow a more specific title.
 
 ## index.html architecture (`js/main.js`)
 
 Pattern: **raw blobs + reprocess on any change**. Global state held at module scope:
 
-- `rawGoogleData`, `rawAppleData`, `rawIciumData` — parsed file contents kept verbatim so re-classification (e.g. after keyword edits) doesn't require re-uploading.
+- `rawGoogleData`, `rawAppleData` — parsed file contents kept verbatim so re-classification (e.g. after keyword edits) doesn't require re-uploading.
 - `combinedData` — derived. Always rebuilt from raw via `reprocessAllData()`.
 - `appMode` (`'all' | 'google' | 'apple'`) and `selectedYear` (`'all'` or `YYYY`) — UI filters.
 
@@ -62,9 +61,9 @@ Behaviors that look like bugs but are intentional:
 
 ## recap.html architecture (`js/recap.js`)
 
-Independent of `main.js` despite reusing parsers. **Redeclares its own globals**: `combinedData`, `rawGoogleData`, `rawAppleData`, `rawIciumData`, and its own `mergeData()`. Don't try to share state across the two pages.
+Independent of `main.js` despite reusing parsers. **Redeclares its own globals**: `combinedData`, `rawGoogleData`, `rawAppleData`, and its own `mergeData()`. Don't try to share state across the two pages.
 
-The recap is **game-agnostic**: it operates on any selected game or on the integrated "전체 통합" view. There is intentionally no game-specific slide logic (e.g. the old Trickcal daily/pass/sashik builders were removed). When adding a new platform or analysis, prefer generalizing existing slides over adding game-specific branches.
+The recap is **game-agnostic**: it operates on any selected game or on the integrated "전체 통합" view. There is intentionally no game-specific slide logic. When adding a new platform or analysis, prefer generalizing existing slides over adding game-specific branches.
 
 Flow:
 1. User uploads file → `processData()` rebuilds `combinedData`, then `populateYearSelect()` and `populateGameSelect()` fill the dropdowns from actual data.
@@ -100,7 +99,6 @@ All keyword changes from any of these paths are session-local (lost on reload). 
 
 - Keywords are matched substring-wise against `${title} ${publisher}`. They are case-sensitive.
 - Declaration order is load-bearing: `getAppName` returns the first matching app. Within an entry, list more-specific variants first; across entries, put narrower games before broader ones.
-- **Trickcal ordering rule**: `'트릭컬 리바이브'` must be declared before `'트릭컬 글로벌 서버'` because the global entry uses the bare keyword `'Trickcal'` which would otherwise swallow any English Trickcal Revive title. The Revive entry includes `'Trickcal Revive'` so a title containing that string is captured first.
 - **쿠키런 ordering rule**: Both `'쿠키런: 킹덤'` and `'쿠키런: 오븐브레이크'` start with `'쿠키런'`. Never add a bare `'쿠키런'` keyword to either entry — it would steal items from the other.
 - The file groups entries by genre/publisher in comment blocks. When adding a new game, put it in the relevant block and double-check that any short keyword (≤3 chars or a common Korean word) isn't going to substring-match unrelated titles.
 - Watch for accidental `, ,` (double comma) in arrays — it silently inserts `undefined`. Harmless at runtime but it's a code smell.

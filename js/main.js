@@ -4,7 +4,6 @@ let currentGameData = [];
 let overallChartInstance = null;
 let rawGoogleData = null;
 let rawAppleData = null;
-let rawIciumData = null;
 let selectedYear = 'all'; // 추가된 전역 변수
 let appMode = 'all'; // 'all', 'google', 'apple'
 
@@ -20,16 +19,12 @@ function getLocalDateString(date) {
 function setupFileInputListeners() {
     const googleFileInput = document.getElementById('googleFileInput');
     const appleFileInput = document.getElementById('appleFileInput');
-    const iciumFileInput = document.getElementById('iciumFileInput');
 
     if (googleFileInput) {
         googleFileInput.addEventListener('change', (event) => handleFileUpload(event, 'google'));
     }
     if (appleFileInput) {
         appleFileInput.addEventListener('change', (event) => handleFileUpload(event, 'apple'));
-    }
-    if (iciumFileInput) {
-        iciumFileInput.addEventListener('change', (event) => handleFileUpload(event, 'icium'));
     }
 }
 
@@ -42,7 +37,7 @@ function handleFileUpload(event, type) {
         try {
             const fileContent = e.target.result;
             let newData;
-            let statusElementId = type === 'google' ? 'googleFileStatus' : (type === 'apple' ? 'appleFileStatus' : 'iciumFileStatus');
+            let statusElementId = type === 'google' ? 'googleFileStatus' : 'appleFileStatus';
             let statusElement = document.getElementById(statusElementId);
 
             if (type === 'google' && file.name.endsWith('.json')) {
@@ -51,10 +46,6 @@ function handleFileUpload(event, type) {
             } else if (type === 'apple' && (file.name.endsWith('.html') || file.name.endsWith('.htm'))) {
                 const parser = new DOMParser();
                 rawAppleData = parser.parseFromString(fileContent, "text/html");
-                if (statusElement) statusElement.textContent = `✅ ${file.name} 로드됨`;
-            } else if (type === 'icium' && (file.name.endsWith('.html') || file.name.endsWith('.htm'))) {
-                const parser = new DOMParser();
-                rawIciumData = parser.parseFromString(fileContent, "text/html");
                 if (statusElement) statusElement.textContent = `✅ ${file.name} 로드됨`;
             } else {
                 alert('잘못된 파일 형식입니다. .json 또는 .html 파일을 업로드해주세요.');
@@ -86,10 +77,6 @@ function reprocessAllData() {
     if (rawAppleData) {
         const appleData = parseAppleData(rawAppleData);
         mergeData(appleData);
-    }
-    if (rawIciumData) {
-        const iciumData = parseIciumData(rawIciumData);
-        mergeData(iciumData);
     }
 
     // 진단: 병합 후 게임별 건수 + 2026-06 항목 존재 여부
@@ -123,7 +110,7 @@ function reprocessAllData() {
 }
 
 // '기타'로 분류된 결제 제목에서 게임 후보를 추출하는 휴리스틱.
-// 1순위: 괄호/대괄호 안의 내용 (보통 게임 이름이 여기에 들어감, 예: "데일리 공물 (트릭컬 리바이브)")
+// 1순위: 괄호/대괄호 안의 내용 (보통 게임 이름이 여기에 들어감, 예: "스타터 패키지 (게임명)")
 // 2순위: 구분자(' - ', ' : ' 등) 앞부분
 const TITLE_SEPARATORS = [' - ', ' – ', ' — ', ' : ', ' | ', ' / ', ' · '];
 const PAREN_REGEX = /[(\[]([^)\]]+)[)\]]/g;
@@ -362,8 +349,7 @@ function mergeData(newData) {
             // 중복 데이터 방지를 위해 간단한 ID 생성 및 확인
             newData[gameName].forEach(newItem => {
                 const newItemId = `${newItem.date.toISOString()}-${newItem.title}-${newItem.price}`;
-                // 아이시움 데이터는 중복 구매가 많을 수 있으므로 중복 체크를 건너뜁니다.
-                const isDuplicate = newItem.source !== 'icium' && combinedData[gameName].some(existingItem => {
+                const isDuplicate = combinedData[gameName].some(existingItem => {
                     const existingItemId = `${existingItem.date.toISOString()}-${existingItem.title}-${existingItem.price}`;
                     return existingItemId === newItemId;
                 });
@@ -1065,7 +1051,6 @@ function resetAllData() {
     currentGameData = [];
     rawGoogleData = null;
     rawAppleData = null;
-    rawIciumData = null;
     selectedYear = 'all'; // 년도 필터 초기화
     
     if (overallChartInstance) {
@@ -1082,17 +1067,13 @@ function resetAllData() {
     // 파일 입력 필드 및 상태 초기화
     const googleInput = document.getElementById('googleFileInput');
     const appleInput = document.getElementById('appleFileInput');
-    const iciumInput = document.getElementById('iciumFileInput');
     const googleStatus = document.getElementById('googleFileStatus');
     const appleStatus = document.getElementById('appleFileStatus');
-    const iciumStatus = document.getElementById('iciumFileStatus');
 
     if(googleInput) googleInput.value = '';
     if(appleInput) appleInput.value = '';
-    if(iciumInput) iciumInput.value = '';
     if(googleStatus) googleStatus.textContent = '';
     if(appleStatus) appleStatus.textContent = '';
-    if(iciumStatus) iciumStatus.textContent = '';
 }
 
 function switchAppMode(mode) {
@@ -1108,7 +1089,6 @@ function switchAppMode(mode) {
 
     const googleBox = document.getElementById('google-upload-box');
     const appleBox = document.getElementById('apple-upload-box');
-    const iciumBox = document.getElementById('icium-upload-box');
     const mainTitle = document.getElementById('main-title');
     const navLinks = document.querySelectorAll('.nav-link');
     const descriptions = document.querySelectorAll('.page-description');
@@ -1128,17 +1108,14 @@ function switchAppMode(mode) {
     if (mode === 'google') {
         if (googleBox) googleBox.classList.remove('hidden');
         if (appleBox) appleBox.classList.add('hidden');
-        if (iciumBox) iciumBox.classList.add('hidden');
         mainTitle.innerHTML = '📑 Sort Orders · Google Play';
     } else if (mode === 'apple') {
         if (googleBox) googleBox.classList.add('hidden');
         if (appleBox) appleBox.classList.remove('hidden');
-        if (iciumBox) iciumBox.classList.add('hidden');
         mainTitle.innerHTML = '📑 Sort Orders · Apple Store';
     } else {
         if (googleBox) googleBox.classList.remove('hidden');
         if (appleBox) appleBox.classList.remove('hidden');
-        if (iciumBox) iciumBox.classList.remove('hidden');
         mainTitle.innerHTML = '📑 Sort Orders · 결제 정리함';
     }
 

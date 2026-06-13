@@ -28,7 +28,7 @@ const CURRENCY_CODE_TO_SYMBOL = {
 
 // 결제 금액 파싱.
 // 두 가지 입력 형식을 모두 지원합니다:
-//   1) 문자열 형식 (구 Google / Apple / Icium): "₩9,900", "$9.99"
+//   1) 문자열 형식 (구 Google / Apple): "₩9,900", "$9.99"
 //   2) 객체 형식 (최근 Google Takeout): { amountMicros: "9900000000", currencyCode: "KRW" }
 function parsePrice(priceInput) {
     // 객체(신규) 형식
@@ -172,62 +172,5 @@ function parseAppleData(doc) {
             }
         });
     });
-    return processedData;
-}
-
-/**
- * 아이시움 라운지 결제 내역(HTML)을 파싱하여 표준화된 데이터 객체를 반환합니다.
- */
-function parseIciumData(doc) {
-    const processedData = {};
-    // ID가 변경될 가능성을 고려하여 더 유연한 선택자 사용 (또는 기본 ID 사용)
-    const historyPanel = doc.querySelector('[id*="content-/history"]') || doc.querySelector('#radix-_r_0_-content-\\/history');
-
-    if (!historyPanel) {
-        console.error("구매 내역 영역을 찾을 수 없습니다.");
-        return processedData;
-    }
-
-    const cards = historyPanel.querySelectorAll('div[data-slot="card"]');
-
-    cards.forEach((card) => {
-        // innerText 대신 textContent 사용 (DOMParser 호환성)
-        // 공백 정규화 (여러 개의 공백을 하나로)
-        const status = card.querySelector('.text-lg')?.textContent.replace(/\s+/g, ' ').trim();
-
-        // '지급 완료'를 포함하고 있는지 확인 (더 유연하게)
-        if (!status || !status.includes('지급 완료')) return;
-
-        const orderDateStr = card.querySelector('.text-slate-700')?.textContent.replace(' 주문', '').trim();
-        // '2024. 12. 30.' 또는 '2024.12.30' 형식 파싱
-        const dateParts = orderDateStr.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
-        if (!dateParts) return;
-        const date = new Date(dateParts[1], dateParts[2] - 1, dateParts[3]);
-
-        const title = card.querySelector('.overflow-hidden.text-ellipsis')?.textContent.trim();
-
-        const priceElements = card.querySelectorAll('.text-lg');
-        // 보통 두 번째 .text-lg가 가격임
-        let priceText = "";
-        if (priceElements.length > 1) {
-            const priceElement = priceElements[1];
-            // 할인 전 가격(line-through)이 포함된 경우 제거하고 실제 결제액만 추출
-            const clone = priceElement.cloneNode(true);
-            const originalPrices = clone.querySelectorAll('.line-through');
-            originalPrices.forEach(el => el.remove());
-            priceText = clone.textContent.trim();
-        }
-        const priceInfo = parsePrice(priceText);
-
-        const appName = '트릭컬 리바이브'; 
-
-        if (priceInfo.amount > 0) {
-            if (!processedData[appName]) {
-                processedData[appName] = [];
-            }
-            processedData[appName].push({ date, title, publisher: '', price: priceInfo.amount, currency: priceInfo.currency, source: 'icium' });
-        }
-    });
-
     return processedData;
 }

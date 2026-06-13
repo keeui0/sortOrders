@@ -1,7 +1,6 @@
 let combinedData = {};
 let rawGoogleData = null;
 let rawAppleData = null;
-let rawIciumData = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     setupFileInputListeners();
@@ -78,11 +77,9 @@ async function loadUpdateHistory() {
 function setupFileInputListeners() {
     const googleInput = document.getElementById('googleFileInput');
     const appleInput = document.getElementById('appleFileInput');
-    const iciumInput = document.getElementById('iciumFileInput');
 
     if (googleInput) googleInput.addEventListener('change', (e) => handleFileUpload(e, 'google'));
     if (appleInput) appleInput.addEventListener('change', (e) => handleFileUpload(e, 'apple'));
-    if (iciumInput) iciumInput.addEventListener('change', (e) => handleFileUpload(e, 'icium'));
 }
 
 function handleFileUpload(event, type) {
@@ -93,16 +90,13 @@ function handleFileUpload(event, type) {
     reader.onload = function(e) {
         try {
             const fileContent = e.target.result;
-            const statusId = type === 'google' ? 'googleFileStatus' : (type === 'apple' ? 'appleFileStatus' : 'iciumFileStatus');
+            const statusId = type === 'google' ? 'googleFileStatus' : 'appleFileStatus';
 
             if (type === 'google') {
                 rawGoogleData = JSON.parse(fileContent);
-            } else if (type === 'apple') {
-                const parser = new DOMParser();
-                rawAppleData = parser.parseFromString(fileContent, "text/html");
             } else {
                 const parser = new DOMParser();
-                rawIciumData = parser.parseFromString(fileContent, "text/html");
+                rawAppleData = parser.parseFromString(fileContent, "text/html");
             }
 
             const statusElem = document.getElementById(statusId);
@@ -122,7 +116,6 @@ function processData() {
     combinedData = {};
     if (rawGoogleData) mergeData(parseGoogleData(rawGoogleData));
     if (rawAppleData) mergeData(parseAppleData(rawAppleData));
-    if (rawIciumData) mergeData(parseIciumData(rawIciumData));
 
     populateYearSelect();
     populateGameSelect();
