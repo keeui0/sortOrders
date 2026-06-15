@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sort Orders · 결제 정리함</title>
+    <script>
+        // 첫 페인트 전에 테마를 적용해 깜빡임(FOUC)을 방지한다. 저장값 → OS 설정 순.
+        (function () {
+            var t = localStorage.getItem('theme');
+            if (t !== 'light' && t !== 'dark') {
+                t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -14,8 +24,11 @@
             <a href="#" class="nav-link" data-mode="google">🎮 Google Play</a>
             <a href="#" class="nav-link" data-mode="apple">🍎 Apple Store</a>
             <a href="#" class="update-history-tab" id="updateHistoryBtn">📜 업데이트 내역</a>
+            <button type="button" id="themeToggleBtn" class="theme-toggle" aria-label="라이트/다크 모드 전환">🌙</button>
         </header>
         <h1 id="main-title">📑 Sort Orders · 결제 정리함</h1>
+        <p class="tagline">흩어진 결제, 한눈에 정리</p>
+        <section class="setup">
         <div id="description-all" class="page-description">
             <p>
                 Google Takeout의 <strong>'Order History.json'</strong> (<a href="guide/guide.html" target="_blank">파일 다운로드 가이드 보기</a>)<br>
@@ -48,7 +61,10 @@
                 <span id="appleFileStatus" class="file-status"></span>
             </div>
         </div>
-        <button id="resetButton">초기화</button>
+            <div class="setup-actions">
+                <button id="resetButton">↺ 초기화</button>
+            </div>
+        </section>
         
         <!-- 키워드 관리 -->
         <div id="keyword-manager" class="hidden">
@@ -74,16 +90,27 @@
             </details>
         </div>
 
-        <!-- 화폐 선택 select -->
-        <div id="currency-section" class="hidden">
-            <h2>💱 화폐 단위 선택</h2>
-            <select id="currency-select"></select>
+        <!-- 퍼블리셔 자동 분류 안내 -->
+        <div id="auto-classify-note" class="hidden"></div>
+
+        <!-- 필터 바 -->
+        <div class="filter-bar">
+            <div id="currency-section" class="filter-field hidden">
+                <label for="currency-select">💱 화폐 단위</label>
+                <select id="currency-select"></select>
+            </div>
+            <div id="yearly-detail-section" class="filter-field hidden">
+                <label for="year-detail-select">📅 년도</label>
+                <select id="year-detail-select"></select>
+            </div>
         </div>
-        <!-- 전체 요약 섹션 -->
-        <div id="overall-summary-section" class="hidden">
+
+        <!-- 전체 요약 카드 -->
+        <div id="overall-summary-section" class="stat-grid hidden">
             <div id="overall-summary" class="summary-box"></div>
             <div id="top-spender-summary" class="summary-box secondary"></div>
         </div>
+        <div id="yearly-detail-summary" class="summary-box tertiary hidden"></div>
         
         <!-- 전체 통계 차트 섹션 -->
         <div id="overall-stats-section" class="hidden">
@@ -100,18 +127,6 @@
             <div class="chart-container">
                 <canvas id="overall-spending-chart"></canvas>
             </div>
-        </div>
-
-        <!-- 년도별 상세 분석 섹션 -->
-        <div id="yearly-detail-section" class="hidden">
-            <div class="stats-header">
-                <h2>📅 년도별 상세 분석</h2>
-                <div class="stats-controls">
-                    <label for="year-detail-select">년도 선택:</label>
-                    <select id="year-detail-select"></select>
-                </div>
-            </div>
-            <div id="yearly-detail-summary" class="summary-box tertiary"></div>
         </div>
 
         <!-- 게임 선택 섹션 -->

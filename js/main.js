@@ -5,6 +5,7 @@ let rawGoogleData = null;
 let rawAppleData = null;
 let selectedYear = 'all';
 let appMode = 'all'; // 'all', 'google', 'apple'
+let autoAppliedPublishers = []; // 업로드 직후 자동 분류된 퍼블리셔 그룹 이름
 
 // 날짜를 'YYYY-MM-DD' 형식의 문자열로 변환 (현지 시간대 기준)
 function getLocalDateString(date) {
@@ -52,6 +53,8 @@ function handleFileUpload(event, type) {
             }
             
             reprocessAllData();
+            // 퍼블리셔 기반 후보는 신뢰도가 높아 업로드 직후 자동 분류하고 결과를 바로 보여준다.
+            if (autoApplyPublisherKeywords() > 0) reprocessAllData();
 
         } catch (error) {
             alert('파일을 처리하는 중 오류가 발생했습니다. 파일 형식이 올바른지 확인해주세요.');
@@ -105,6 +108,7 @@ function reprocessAllData() {
     displayCurrentKeywords();
     displayKeywordSuggestions();
     displayEtcItemsList();
+    displayAutoClassifyNote();
 }
 
 // '기타'로 분류된 결제 제목에서 게임 후보를 추출하는 휴리스틱.
@@ -210,9 +214,12 @@ function displayEtcItemsList() {
     }
 
     const totalCount = (combinedData['기타'] || []).length;
+    // 고유 제목이 매우 많을 때 모두 그리면 무거우므로 상위 N개만 렌더링한다.
+    const ETC_RENDER_LIMIT = 200;
+    const shown = rows.slice(0, ETC_RENDER_LIMIT);
 
     let bodyHTML = '';
-    rows.forEach(r => {
+    shown.forEach(r => {
         const pubBadge = r.publisher
             ? `<span class="etc-row-pub">${escapeHTML(r.publisher)}</span>`
             : '';
@@ -238,11 +245,16 @@ function displayEtcItemsList() {
         `;
     });
 
+    const moreNote = rows.length > ETC_RENDER_LIMIT
+        ? `<p class="etc-help">목록이 많아 상위 ${ETC_RENDER_LIMIT}개 제목만 표시했어요. 나머지 ${rows.length - ETC_RENDER_LIMIT}개는 위 추천 카드로 추가하거나 키워드를 등록하면 목록이 줄어듭니다.</p>`
+        : '';
+
     container.innerHTML = `
         <details open>
             <summary><h3>📋 '기타' 전체 목록 (${rows.length}개 제목 / ${totalCount}건)</h3></summary>
             <p class="etc-help">위 후보가 못 잡은 항목까지 모두 확인할 수 있습니다. '+ 새 앱으로'는 제목 그대로 신규 앱을 등록하고, '↑ 폼에 채우기'는 위 입력 폼에 제목을 옮겨 기존 앱에 키워드로 추가할 수 있게 합니다.</p>
             <ul class="etc-list">${bodyHTML}</ul>
+            ${moreNote}
         </details>
     `;
     container.classList.remove('hidden');
@@ -341,6 +353,43 @@ function addAllSuggestions() {
     reprocessAllData();
 }
 
+// 퍼블리셔(🏢) 기반 후보만 자동으로 키워드 등록한다. 제목 추출(📝) 후보는 추정이라
+// 자동 적용하지 않고 추천 카드로만 남긴다. 새로 등록한 그룹 수를 반환.
+function autoApplyPublisherKeywords() {
+    const candidates = extractAppCandidates().filter(c => c.source === 'publisher');
+    let added = 0;
+    candidates.forEach(c => {
+        if (!appKeywords[c.name]) appKeywords[c.name] = [];
+        if (!appKeywords[c.name].includes(c.name)) {
+            appKeywords[c.name].push(c.name);
+            if (!autoAppliedPublishers.includes(c.name)) autoAppliedPublishers.push(c.name);
+            added++;
+        }
+    });
+    return added;
+}
+
+// 자동 분류된 퍼블리셔 그룹을 사용자에게 알려주는 안내 박스. 사용자가 삭제한 그룹은 빼고 표시.
+function displayAutoClassifyNote() {
+    const el = document.getElementById('auto-classify-note');
+    if (!el) return;
+
+    const active = autoAppliedPublishers.filter(name => appKeywords[name]);
+    if (active.length === 0) {
+        el.innerHTML = '';
+        el.classList.add('hidden');
+        return;
+    }
+
+    const chips = active.map(n => `<span class="auto-chip">${escapeHTML(n)}</span>`).join('');
+    el.innerHTML = `
+        <p class="auto-classify-title">🤖 퍼블리셔 기준으로 ${active.length}개 그룹을 자동 분류했어요</p>
+        <p class="auto-classify-help">잘못 묶였다면 아래 '키워드 관리'에서 삭제하거나 제목 추출 후보로 다시 분류할 수 있어요.</p>
+        <div class="auto-chip-row">${chips}</div>
+    `;
+    el.classList.remove('hidden');
+}
+
 function mergeData(newData) {
     for (const gameName in newData) {
         if (combinedData[gameName]) {
@@ -401,6 +450,7 @@ function populateYearDetailSelector() {
 
     if (uniqueYears.length === 0) {
         section.classList.add('hidden');
+        document.getElementById('yearly-detail-summary')?.classList.add('hidden');
         return;
     }
 
@@ -475,12 +525,14 @@ function displayYearlyDetailSummary(year) {
 
     if (Object.keys(totals).length > 0) {
         summaryDiv.innerHTML = `
-            <div>📊 <strong>${titlePrefix}</strong> 총 결제액: ${formatTotals(totals, currency)}</div>
-            <div style="margin-top: 10px;">👑 해당 기간 가장 많이 결제한 앱/게임: <strong>${topGame.name}</strong> (${formatTotals(topGame.totals, currency)})</div>
+            <span class="stat-label">📊 ${titlePrefix} 총 결제액</span>
+            <span class="stat-value">${formatTotals(totals, currency)}</span>
+            <span class="stat-sub">👑 최다 결제 · <strong>${topGame.name}</strong> (${formatTotals(topGame.totals, currency)})</span>
         `;
     } else {
-        summaryDiv.innerHTML = `정보가 없습니다.`;
+        summaryDiv.innerHTML = `<span class="stat-label">해당 기간 정보가 없습니다.</span>`;
     }
+    summaryDiv.classList.remove('hidden');
 }
 
 function calculateTotals(data){
@@ -534,9 +586,16 @@ function displayOverallSummaries(data = combinedData) {
     });
 
     if (Object.keys(grandTotals).length > 0) {
-        const titleSuffix = appMode === 'google' ? ' (Google Play)' : (appMode === 'apple' ? ' (Apple Store)' : ' (모든 스토어)');
-        overallSummaryDiv.innerHTML = `💸 ${titleSuffix} 총 결제액: ${formatTotals(grandTotals, currency)}`;
-        topSpenderDiv.innerHTML = `👑 가장 많이 결제한 앱/게임: <strong>${topGame.name}</strong> (${formatTotals(topGame.totals, currency)})`;
+        const storeLabel = appMode === 'google' ? 'Google Play' : (appMode === 'apple' ? 'Apple Store' : '모든 스토어');
+        overallSummaryDiv.innerHTML = `
+            <span class="stat-label">💸 총 결제액 · ${storeLabel}</span>
+            <span class="stat-value">${formatTotals(grandTotals, currency)}</span>
+        `;
+        topSpenderDiv.innerHTML = `
+            <span class="stat-label">👑 최다 결제 앱·게임</span>
+            <span class="stat-value">${topGame.name}</span>
+            <span class="stat-sub">${formatTotals(topGame.totals, currency)}</span>
+        `;
         overallSummarySection.classList.remove('hidden');
     } else {
         overallSummarySection.classList.add('hidden');
@@ -630,7 +689,10 @@ function displaySummary(data, currency) {
         .reduce((sum, item) => sum + item.price, 0);
         
         const yearLabel = selectedYear === 'all' ? '전체 기간' : `${selectedYear}년`;
-        summaryDiv.innerHTML = `<strong>선택된 앱/게임 (${yearLabel})</strong> 총 결제액: <strong>${currency}${totalSpent.toLocaleString()}</strong>`;
+        summaryDiv.innerHTML = `
+            <span class="stat-label">🔍 선택한 앱·게임 · ${yearLabel}</span>
+            <span class="stat-value">${currency}${totalSpent.toLocaleString()}</span>
+        `;
         summaryDiv.classList.remove('hidden');
     } else {
         summaryDiv.classList.add('hidden');
@@ -778,6 +840,11 @@ function displayOverallStatsChart(data) {
     if (!canvas) return; // 해당 캔버스가 없는 페이지일 수 있음
 
     const ctx = canvas.getContext('2d');
+
+    // Chart.js는 CSS 변수를 못 읽으므로 현재 테마에 맞춰 축·범례·그리드 색을 직접 지정.
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    Chart.defaults.color = isDark ? '#a6abb6' : '#5f6470';
+    Chart.defaults.borderColor = isDark ? 'rgba(255, 255, 255, .09)' : 'rgba(24, 24, 27, .07)';
 
     if (Object.keys(data).length === 0) {
         overallStatsSection.classList.add('hidden');
@@ -1037,13 +1104,14 @@ function resetAllData() {
     rawGoogleData = null;
     rawAppleData = null;
     selectedYear = 'all';
-    
+    autoAppliedPublishers = [];
+
     if (overallChartInstance) {
         overallChartInstance.destroy();
         overallChartInstance = null;
     }
 
-    ['overall-summary-section', 'overall-stats-section', 'yearly-detail-section', 'game-selector-section', 'summary', 'monthly-report', 'full-history', 'currency-section', 'keyword-manager'].forEach(id => {
+    ['overall-summary-section', 'overall-stats-section', 'yearly-detail-section', 'yearly-detail-summary', 'game-selector-section', 'summary', 'monthly-report', 'full-history', 'currency-section', 'keyword-manager', 'auto-classify-note'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
@@ -1166,9 +1234,12 @@ function setupKeywordManagement() {
         }
     });
 
+    let keywordSearchTimer = null;
     keywordSearchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        displayCurrentKeywords(searchTerm);
+        // 입력마다 전체 목록을 다시 그리지 않도록 디바운스
+        clearTimeout(keywordSearchTimer);
+        keywordSearchTimer = setTimeout(() => displayCurrentKeywords(searchTerm), 120);
     });
 
     const suggestionsContainer = document.getElementById('keyword-suggestions');
@@ -1255,6 +1326,11 @@ async function loadUpdateHistory() {
         if (!response.ok) throw new Error('Network response was not ok');
         const updates = await response.json();
 
+        if (!Array.isArray(updates) || updates.length === 0) {
+            container.innerHTML = '<p class="update-empty">아직 등록된 업데이트 내역이 없습니다.</p>';
+            return;
+        }
+
         let html = '';
         updates.forEach(update => {
             html += `
@@ -1300,6 +1376,27 @@ function setupUpdateHistoryModal() {
     });
 }
 
+// 라이트/다크 토글. data-theme은 head 인라인 스크립트가 이미 적용했고, 여기선 버튼 동작만 연결.
+function setupThemeToggle() {
+    const btn = document.getElementById('themeToggleBtn');
+    if (!btn) return;
+
+    const syncIcon = () => {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        btn.textContent = dark ? '☀️' : '🌙';
+        btn.setAttribute('aria-label', dark ? '라이트 모드로 전환' : '다크 모드로 전환');
+    };
+    syncIcon();
+
+    btn.addEventListener('click', () => {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        syncIcon();
+        // Chart.js는 CSS 변수를 모르므로 테마 색을 다시 입혀 새로 그린다.
+        if (overallChartInstance) displayOverallStatsChart(getFilteredCombinedData());
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     setupFileInputListeners();
@@ -1307,6 +1404,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupKeywordManagement();
     displayCurrentKeywords();
     setupUpdateHistoryModal();
+    setupThemeToggle();
 
     // 초기 모드 설정 (URL 해시값 확인 또는 기본값 'all')
     const hash = window.location.hash.substring(1);

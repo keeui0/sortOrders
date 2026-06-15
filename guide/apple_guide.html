@@ -4,129 +4,199 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Apple Store 구매 내역 다운로드 가이드</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('theme');
+            if (t !== 'light' && t !== 'dark') {
+                t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
     <style>
-        @import url('https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css');
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css');
+
+        :root {
+            --bg: #f6f7f9;
+            --surface: #ffffff;
+            --ink: #18181b;
+            --ink-soft: #5f6470;
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --line: #ededf0;
+            --line-strong: #e0e1e6;
+            --danger: #e5484d;
+            --code-bg: #f3f4f6;
+            --note-bg: #fdf3e3;
+            --note-border: #f1c40f;
+            --warn-bg: #fef2f2;
+            --warn-border: #e5484d;
+            --warn-ink: #cc3a3f;
+            --shadow: 0 4px 16px rgba(24, 24, 27, .06);
+            --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+                system-ui, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+        }
+        :root[data-theme="dark"] {
+            --bg: #0f1116;
+            --surface: #181b22;
+            --ink: #e7e9ee;
+            --ink-soft: #a6abb6;
+            --primary: #8a8af6;
+            --primary-dark: #aeaef9;
+            --line: #282c35;
+            --line-strong: #353a45;
+            --danger: #f87171;
+            --code-bg: #20242d;
+            --note-bg: #2b2212;
+            --note-border: #b58a23;
+            --warn-bg: #2c1a1b;
+            --warn-border: #f87171;
+            --warn-ink: #f87171;
+            --shadow: 0 6px 20px rgba(0, 0, 0, .45);
+        }
+        :root[data-theme="dark"] { color-scheme: dark; }
+
+        * { box-sizing: border-box; }
 
         body {
-            font-family: 'Galmuri11', sans-serif;
-            background-color: #f4f4f9;
-            color: #333;
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--ink);
             margin: 0;
-            padding: 20px;
+            padding: 32px 20px;
             display: flex;
             justify-content: center;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
             width: 100%;
             max-width: 800px;
-            background-color: #fff;
-            padding: 30px 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            background: var(--surface);
+            padding: 36px 40px 44px;
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
         }
 
         h1, h2 {
-            color: #2c3e50;
-            border-bottom: 2px solid #eaeaea;
-            padding-bottom: 10px;
+            color: var(--ink);
+            letter-spacing: -0.01em;
         }
+        h1 { font-size: 1.6rem; font-weight: 800; margin-top: 0; }
+        h2 { font-size: 1.2rem; font-weight: 700; }
 
         ol {
             list-style-type: none;
             counter-reset: step-counter;
             padding-left: 0;
         }
-
         li {
             counter-increment: step-counter;
-            margin-bottom: 25px;
+            margin-bottom: 24px;
             display: flex;
             align-items: flex-start;
         }
-
         li::before {
             content: counter(step-counter);
-            font-size: 1.5em;
-            font-weight: bold;
+            font-size: 1rem;
+            font-weight: 700;
             color: #fff;
-            background-color: #555;
+            background: var(--primary);
             border-radius: 50%;
-            width: 35px;
-            height: 35px;
-            min-width: 35px;
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
             display: inline-flex;
             justify-content: center;
             align-items: center;
-            margin-right: 15px;
-            margin-top: 5px;
+            margin-right: 14px;
+            margin-top: 2px;
         }
-        
-        .step-content {
-            display: flex;
-            flex-direction: column;
-        }
+        .step-content { display: flex; flex-direction: column; min-width: 0; }
 
         p {
-            line-height: 1.6;
+            line-height: 1.7;
             margin: 5px 0;
+            color: var(--ink-soft);
         }
-
-        strong {
-            color: #e74c3c;
-        }
+        strong { color: var(--ink); font-weight: 700; }
 
         code {
-            background-color: #ecf0f1;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.9em;
+            background: var(--code-bg);
+            color: var(--ink);
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-size: 0.88em;
         }
 
         a {
-            color: #3498db;
+            color: var(--primary);
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 600;
         }
-
-        a:hover {
-            text-decoration: underline;
-        }
+        a:hover { text-decoration: underline; }
 
         img {
             max-width: 100%;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            margin-top: 10px;
-        }
-        
-        .note {
-            background-color: #fff8e1;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin-top: 20px;
-            border-radius: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--line-strong);
+            margin-top: 12px;
         }
 
-        
+        .note {
+            background: var(--note-bg);
+            border-left: 4px solid var(--note-border);
+            padding: 14px 16px;
+            margin-top: 22px;
+            border-radius: 10px;
+        }
+        .note p { color: var(--ink); margin: 0; }
+
         .warning-box {
-            background-color: #fff0f0;
-            border: 2px solid #e74c3c;
-            border-radius: 8px;
-            padding: 20px;
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            border-radius: 14px;
+            padding: 18px 20px;
             margin: 20px 0;
         }
         .warning-box h2 {
-            color: #c0392b;
+            color: var(--warn-ink);
             margin-top: 0;
-            border: none;
         }
         .warning-box p {
-            font-weight: bold;
+            color: var(--ink);
+            font-weight: 500;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            width: 38px;
+            height: 38px;
+            border-radius: 999px;
+            border: 1px solid var(--line-strong);
+            background: var(--surface);
+            color: var(--ink);
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+        .theme-toggle:hover { border-color: var(--primary); }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .container { padding: 24px 20px 32px; }
+            h1 { font-size: 1.35rem; }
         }
     </style>
 </head>
 <body>
+    <button type="button" class="theme-toggle" onclick="toggleTheme()" aria-label="라이트/다크 모드 전환">🌙</button>
     <div class="container">
         <h1>🍎 Apple Store 구매 내역 다운로드 가이드</h1>
          <div class="warning-box">
@@ -174,5 +244,21 @@
             <p><strong>참고:</strong> 이 과정에서 저장한 HTML 파일은 사용자의 개인 컴퓨터에서만 처리되며, 분석기 웹페이지는 어떠한 데이터도 외부 서버로 전송하지 않습니다.</p>
         </div>
     </div>
+
+    <script>
+        function toggleTheme() {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            syncThemeIcon();
+        }
+        function syncThemeIcon() {
+            var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+            document.querySelectorAll('.theme-toggle').forEach(function (b) {
+                b.textContent = dark ? '☀️' : '🌙';
+            });
+        }
+        syncThemeIcon();
+    </script>
 </body>
 </html>
