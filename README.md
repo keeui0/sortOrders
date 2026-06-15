@@ -4,9 +4,14 @@
 
 Google Play / Apple App Store의 결제 내역 파일을 업로드하면 브라우저 안에서 게임별·월별·연도별 결제 통계를 자동으로 시각화해주는 정적 웹 앱입니다. 업로드한 파일은 어떤 서버로도 전송되지 않고 사용자의 브라우저에서만 처리됩니다.
 
-![image](readme01.png)
-![image](readme02.png)
-![image](readme03.png)
+![통합 분석 대시보드 — 파일 업로드 화면](readme01.png)
+![키워드 관리 · '기타' 자동 분류 및 추천](readme02.png)
+![결제 요약 카드와 통계 차트](readme03.png)
+![앱/게임별 상세 — 월별 결제 요약과 차트](readme05.png)
+
+> 🌙 라이트 / 다크 모드를 모두 지원합니다.
+
+![다크 모드 화면](readme04.png)
 
 ## ✨ 주요 기능
 
@@ -77,11 +82,11 @@ python -m http.server 8000
 │   ├── appKeywords.js      # 게임 분류 키워드 사전 (수동 큐레이션)
 │   ├── parsers.js          # Google/Apple 결제 데이터 파서
 │   └── main.js             # index.html 컨트롤러
-├── guide/                  # 각 플랫폼 데이터 추출 가이드 HTML
-├── image/                  # README/가이드 이미지 등
+├── guide/                  # 각 플랫폼 데이터 추출 가이드 HTML (이미지 없이 글로만 안내)
+├── readme01.png ~ readme05.png  # README용 앱 스크린샷
 └── CLAUDE.md               # 코드베이스 아키텍처 문서 (AI 도구 및 신규 컨트리뷰터용)
 ```
 
 ## 📝 라이선스 / 이미지 자산 안내
 
-- `readme01.png` ~ `readme03.png`, `playStoreCheck.png` 등의 가이드 이미지는 본 저장소가 보유합니다.
+- `readme01.png` ~ `readme05.png` 앱 스크린샷은 본 저장소가 보유한 자산입니다.

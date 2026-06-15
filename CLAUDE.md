@@ -18,8 +18,8 @@ Sort Orders (결제 정리함) — a static, client-side web app that ingests pu
 - `js/main.js` — controller for `index.html`.
 - `css/style.css` — single stylesheet.
 - `updates.json` — changelog rendered by the update-history modal.
-- `guide/` — HTML guides for exporting purchase history from each platform.
-- `image/` — README / guide screenshots.
+- `guide/` — HTML guides for exporting purchase history from each platform. Text-only (no screenshots), each with its own inline styles + light/dark toggle.
+- `readme01.png`–`readme05.png` (repo root) — README app screenshots. (There is no `image/` folder; guides reference no images.)
 
 Note: `README.md` lists `google.html` and `apple.html` as separate files, but those pages were merged into `index.html` as SPA modes (see `updates.json` 2026-05-05). The README is out of date on structure.
 
