@@ -25,14 +25,6 @@ Google Play / Apple App Store의 결제 내역 파일을 업로드하면 브라�
 - **'기타' 전체 목록 보기**: 휴리스틱이 못 잡은 항목까지 모두 시야에 노출. 행마다 `+ 새 앱으로` / `↑ 폼에 채우기` 버튼으로 빠르게 분류
 - **수동 키워드 추가**: 직접 앱 이름과 키워드를 등록 가능 (쉼표로 여러 키워드 한번에 등록)
 
-### 📅 결산 페이지 (`recap.html`)
-- 업로드한 데이터에서 결제가 있는 **연도와 게임 목록을 자동 추출**해 드롭다운에 채움
-- **전체 통합** 또는 **특정 게임** 단위로 결산 진행
-- 전체 통합 모드에서는 **Top 7 게임 슬라이드** 추가 노출
-- 슬라이드: 인트로 → 총액(다중 통화 보조 표시) → Top 7 게임 → 월별 타임라인 → 최고 지출 월 → 아웃트로
-- **진행 중인 연도**를 고르면 "중간 결산", "지금까지" 같은 표현으로 자동 분기
-- 월별 영수증을 **PNG 이미지로 저장** (html2canvas 활용)
-
 ### 📱 모바일 최적화
 - 반응형 레이아웃, 좁은 화면에서 표가 카드형으로 자동 전환
 
@@ -43,7 +35,6 @@ Google Play / Apple App Store의 결제 내역 파일을 업로드하면 브라�
    - **Google Play**: [Google Takeout](https://takeout.google.com/) → 'Google Play 스토어' → `Order History.json` 다운로드 ([가이드](guide/guide.html))
    - **Apple App Store**: [Apple 문제 신고](https://reportaproblem.apple.com/) → 전체 내역이 보일 때까지 스크롤 → 페이지 저장(HTML) ([가이드](guide/apple_guide.html))
 3. 데이터가 분석되면 하단에서 차트와 상세 내역을 확인합니다.
-4. `📅 결제 결산` 탭에서 슬라이드 형식의 한 해 결산을 진행할 수 있습니다.
 
 > 키워드 관리 및 키워드 추가는 **세션 단위**입니다. 새로고침하면 사용자가 추가한 키워드는 초기화됩니다.
 
@@ -74,21 +65,18 @@ python -m http.server 8000
 
 - HTML / CSS / Vanilla JavaScript (빌드 도구 없음)
 - [Chart.js](https://www.chartjs.org/) — 차트 시각화 (CDN)
-- [html2canvas](https://html2canvas.hertzen.com/) — 결산 영수증 PNG 저장 (CDN)
 
 ## 📁 프로젝트 구조
 
 ```
 .
 ├── index.html              # 통합 분석 대시보드 (SPA: all/google/apple 모드)
-├── recap.html              # 결산 슬라이드 페이지 (게임 무관)
-├── updates.json            # 업데이트 내역 (양쪽 페이지에서 동적 로드)
+├── updates.json            # 업데이트 내역 (동적 로드)
 ├── css/style.css           # 통합 스타일시트
 ├── js/
 │   ├── appKeywords.js      # 게임 분류 키워드 사전 (수동 큐레이션)
 │   ├── parsers.js          # Google/Apple 결제 데이터 파서
-│   ├── main.js             # index.html 컨트롤러
-│   └── recap.js            # recap.html 컨트롤러
+│   └── main.js             # index.html 컨트롤러
 ├── guide/                  # 각 플랫폼 데이터 추출 가이드 HTML
 ├── image/                  # README/가이드 이미지 등
 └── CLAUDE.md               # 코드베이스 아키텍처 문서 (AI 도구 및 신규 컨트리뷰터용)

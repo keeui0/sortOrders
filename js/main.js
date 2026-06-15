@@ -1,10 +1,9 @@
-// 전역 변수
 let combinedData = {};
 let currentGameData = [];
 let overallChartInstance = null;
 let rawGoogleData = null;
 let rawAppleData = null;
-let selectedYear = 'all'; // 추가된 전역 변수
+let selectedYear = 'all';
 let appMode = 'all'; // 'all', 'google', 'apple'
 
 // 날짜를 'YYYY-MM-DD' 형식의 문자열로 변환 (현지 시간대 기준)
@@ -15,7 +14,6 @@ function getLocalDateString(date) {
     return `${year}-${month}-${day}`;
 }
 
-// 파일 입력 이벤트 리스너 설정
 function setupFileInputListeners() {
     const googleFileInput = document.getElementById('googleFileInput');
     const appleFileInput = document.getElementById('appleFileInput');
@@ -49,7 +47,7 @@ function handleFileUpload(event, type) {
                 if (statusElement) statusElement.textContent = `✅ ${file.name} 로드됨`;
             } else {
                 alert('잘못된 파일 형식입니다. .json 또는 .html 파일을 업로드해주세요.');
-                event.target.value = ''; // 파일 선택 초기화
+                event.target.value = '';
                 return;
             }
             
@@ -64,7 +62,7 @@ function handleFileUpload(event, type) {
 }
 
 function reprocessAllData() {
-    combinedData = {}; // 데이터 초기화
+    combinedData = {};
     if (rawGoogleData) {
         // 진단: 업로드된 Google JSON의 최상위 구조 노출
         console.info('[reprocess] rawGoogleData type:', Array.isArray(rawGoogleData) ? `Array(${rawGoogleData.length})` : typeof rawGoogleData);
@@ -409,7 +407,6 @@ function populateYearDetailSelector() {
     const currentSelected = selector.value;
     selector.innerHTML = '';
 
-    // '전체' 옵션 추가
     const allOption = document.createElement('option');
     allOption.value = 'all';
     allOption.textContent = '전체';
@@ -427,12 +424,12 @@ function populateYearDetailSelector() {
     if (currentSelected && (currentSelected === 'all' || uniqueYears.includes(parseInt(currentSelected)))) {
         selector.value = currentSelected;
     } else {
-        selector.value = 'all'; // 기본값 전체
+        selector.value = 'all';
     }
     
     selectedYear = selector.value;
     displayYearlyDetailSummary(selector.value);
-    populateGameSelector(); // 추가됨: 년도 변경 시 게임 리스트 및 상세 데이터 갱신
+    populateGameSelector();
 }
 
 function displayYearlyDetailSummary(year) {
@@ -498,23 +495,18 @@ function calculateTotals(data){
 }
 
 function formatTotals(totals, currencyFilter) {
-    // totals 객체가 비어있을 경우
     if (Object.keys(totals).length === 0) {
         return `<strong>${currencyFilter || '₩'}0</strong>`;
     }
 
-    // currencyFilter가 있고, 해당하는 데이터가 있을 경우
     if (currencyFilter && totals[currencyFilter] !== undefined) {
         const amount = totals[currencyFilter];
 
-        // toLocaleString()은 소수점이 있으면 알아서 포함하고, 없으면 정수로 표시합니다.
-        // 또한 세 자리마다 콤마(,)도 자동으로 추가해 줍니다.
         const formattedAmount = amount.toLocaleString();
 
         return `<strong>${currencyFilter}${formattedAmount}</strong>`;
     }
 
-    // 해당하는 통화 데이터가 없으면 빈 문자열 반환
     return '';
 }
 
@@ -524,7 +516,6 @@ function displayOverallSummaries(data = combinedData) {
     const overallSummarySection = document.getElementById('overall-summary-section');
     const overallSummaryDiv = document.getElementById('overall-summary');
     const topSpenderDiv = document.getElementById('top-spender-summary');
-    // 선택한 화폐 단위
     const currency = document.getElementById('currency-select').value;
 
     const allItems = Object.values(data).flat();
@@ -557,11 +548,10 @@ function populateGameSelector() {
     const selectorSection = document.getElementById('game-selector-section');
     const currency = document.getElementById('currency-select').value;
 
-    if (!selector) return; // 페이지에 selector가 없으면 종료
+    if (!selector) return;
 
     selector.innerHTML = '';
 
-    // 모드 및 년도 필터 적용
     const currentFilteredData = getFilteredCombinedData();
     const finalFilteredData = {};
     Object.keys(currentFilteredData).forEach(gameName => {
@@ -583,8 +573,7 @@ function populateGameSelector() {
 
     if (sortedGames.length === 0) {
         selectorSection.classList.add('hidden');
-        // 전체 요약 및 통계는 연도 필터와 별개로 유지하거나 필요시 숨김 처리 가능
-        // 여기서는 앱/게임 상세 분석이 없으므로 하단 섹션들을 숨김
+        // 앱/게임 상세 분석이 없으므로 하단 섹션들을 숨김
         document.getElementById('summary').classList.add('hidden');
         document.getElementById('monthly-report').classList.add('hidden');
         document.getElementById('full-history').classList.add('hidden');
@@ -609,7 +598,6 @@ function populateGameSelector() {
 
 function updateDisplayForGame(gameName) {
     const currency = document.getElementById('currency-select').value;
-    // 모드 및 년도 필터 적용된 데이터 추출
     let gameData = combinedData[gameName] || [];
 
     gameData = gameData.filter(item => {
@@ -756,7 +744,6 @@ function displayFullHistory(data, currency) {
     table.innerHTML = tableHTML + `</tbody>`;
 }
 
-// 화폐 단위 선택 옵션 표시
 function displayCurrencyOptions() {
     const currencySelect = document.getElementById('currency-section');
     if (!currencySelect) return;
@@ -998,9 +985,9 @@ function setupEventListeners() {
     const yearDetailSelect = document.getElementById('year-detail-select');
     if (yearDetailSelect) {
         yearDetailSelect.addEventListener('change', (e) => {
-            selectedYear = e.target.value; // 전역 변수 업데이트
+            selectedYear = e.target.value;
             displayYearlyDetailSummary(selectedYear);
-            populateGameSelector(); // 하위 섹션들(게임 선택, 월별 보고서, 상세 내역 등) 갱신
+            populateGameSelector();
         });
     }
 
@@ -1017,7 +1004,6 @@ function setupEventListeners() {
         });
     }
 
-    // SPA 모드 전환 이벤트 리스너
     const navLinks = document.querySelectorAll('.nav-link');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -1046,25 +1032,22 @@ function setupEventListeners() {
 }
 
 function resetAllData() {
-    // 전역 데이터 초기화
     combinedData = {};
     currentGameData = [];
     rawGoogleData = null;
     rawAppleData = null;
-    selectedYear = 'all'; // 년도 필터 초기화
+    selectedYear = 'all';
     
     if (overallChartInstance) {
         overallChartInstance.destroy();
         overallChartInstance = null;
     }
 
-    // UI 초기화
     ['overall-summary-section', 'overall-stats-section', 'yearly-detail-section', 'game-selector-section', 'summary', 'monthly-report', 'full-history', 'currency-section', 'keyword-manager'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
     
-    // 파일 입력 필드 및 상태 초기화
     const googleInput = document.getElementById('googleFileInput');
     const appleInput = document.getElementById('appleFileInput');
     const googleStatus = document.getElementById('googleFileStatus');
@@ -1093,7 +1076,6 @@ function switchAppMode(mode) {
     const navLinks = document.querySelectorAll('.nav-link');
     const descriptions = document.querySelectorAll('.page-description');
 
-    // UI 초기화
     navLinks.forEach(link => {
         if (link.dataset.mode === mode) {
             link.classList.add('active');
@@ -1319,7 +1301,6 @@ function setupUpdateHistoryModal() {
 }
 
 
-// 초기 로드 시 이벤트 리스너 설정
 document.addEventListener('DOMContentLoaded', () => {
     setupFileInputListeners();
     setupEventListeners();

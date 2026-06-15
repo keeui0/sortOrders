@@ -4,22 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Sort Orders (결제 정리함) — a static, client-side web app that ingests purchase history files exported from Google Play and Apple Store, normalizes them, and renders combined spending dashboards plus a game-agnostic year-end recap. Repo: `keeui0/sortOrders`.
+Sort Orders (결제 정리함) — a static, client-side web app that ingests purchase history files exported from Google Play and Apple Store, normalizes them, and renders combined spending dashboards. Repo: `keeui0/sortOrders`.
 
-- **Stack**: Vanilla HTML / CSS / JavaScript. Chart.js loaded from CDN. `html2canvas` (CDN) used only by recap. No build step, no package manager, no tests.
+- **Stack**: Vanilla HTML / CSS / JavaScript. Chart.js loaded from CDN. No build step, no package manager, no tests.
 - **Runtime**: Everything runs in the browser; uploaded files never leave the client.
-- **How to run**: Open `index.html` directly, or serve the directory with any static server (e.g. `python -m http.server`) and visit `index.html` / `recap.html`. There are no build, lint, or test commands.
+- **How to run**: Open `index.html` directly, or serve the directory with any static server (e.g. `python -m http.server`) and visit `index.html`. There are no build, lint, or test commands.
 
 ## Top-level layout
 
 - `index.html` — main SPA. Three modes (`all` / `google` / `apple`) selected via hash routing and the `.nav-link` tabs.
-- `recap.html` — separate year-end recap page (storytelling slides for any selected game or all games combined). Loaded independently; does **not** share state with `index.html`.
-- `js/parsers.js` — shared by both pages. Contains the two platform parsers and helpers.
+- `js/parsers.js` — the two platform parsers and helpers.
 - `js/appKeywords.js` — single source of truth for game name → keyword mapping used to bucket items into apps.
-- `js/main.js` — controller for `index.html` only.
-- `js/recap.js` — controller for `recap.html` only.
-- `css/style.css` — single stylesheet for every page.
-- `updates.json` — changelog rendered by both pages' update-history modal.
+- `js/main.js` — controller for `index.html`.
+- `css/style.css` — single stylesheet.
+- `updates.json` — changelog rendered by the update-history modal.
 - `guide/` — HTML guides for exporting purchase history from each platform.
 - `image/` — README / guide screenshots.
 
@@ -52,33 +50,12 @@ Pattern: **raw blobs + reprocess on any change**. Global state held at module sc
 - `combinedData` — derived. Always rebuilt from raw via `reprocessAllData()`.
 - `appMode` (`'all' | 'google' | 'apple'`) and `selectedYear` (`'all'` or `YYYY`) — UI filters.
 
-Mutations re-trigger `reprocessAllData()` → `updateUI()`. UI sections (`overall-summary`, `overall-stats`, `yearly-detail`, `game-selector`, `monthly-report`, `full-history`) are toggled by adding/removing `hidden`. The same monthly + full-history layout is used for every game — there is no per-game UI variant. If you find yourself adding a branch for a specific app name, prefer generalizing or extending the keyword/recap layers instead.
+Mutations re-trigger `reprocessAllData()` → `updateUI()`. UI sections (`overall-summary`, `overall-stats`, `yearly-detail`, `game-selector`, `monthly-report`, `full-history`) are toggled by adding/removing `hidden`. The same monthly + full-history layout is used for every game — there is no per-game UI variant. If you find yourself adding a branch for a specific app name, prefer generalizing or extending the keyword layer instead.
 
 Behaviors that look like bugs but are intentional:
 
 - `switchAppMode()` calls `resetAllData()` — switching tabs wipes uploaded files. This is by design (per `updates.json` 2026-05-05 entry).
 - Keyword edits via the UI mutate `appKeywords` in memory only — they reset on reload (called out in README).
-
-## recap.html architecture (`js/recap.js`)
-
-Independent of `main.js` despite reusing parsers. **Redeclares its own globals**: `combinedData`, `rawGoogleData`, `rawAppleData`, and its own `mergeData()`. Don't try to share state across the two pages.
-
-The recap is **game-agnostic**: it operates on any selected game or on the integrated "전체 통합" view. There is intentionally no game-specific slide logic. When adding a new platform or analysis, prefer generalizing existing slides over adding game-specific branches.
-
-Flow:
-1. User uploads file → `processData()` rebuilds `combinedData`, then `populateYearSelect()` and `populateGameSelect()` fill the dropdowns from actual data.
-2. Year change triggers `populateGameSelect()` again so the game list reflects only games with purchases in that year. Game options are sorted by total spend (descending), with a leading "전체 통합" option.
-3. Start button → `startRecapSequence()` reads (year, scope) and builds `recapSlides`. Scope is either `'all'` or a single game name.
-4. `showSlide(i)` renders each slide type: `intro`, `total`, `top_games` (only when `scope === 'all'` and there is more than one game), `monthly_timeline`, `max_month_receipt`, `outro`.
-5. `downloadLongReceipt()` builds a hidden capture-only DOM and uses `html2canvas` to export a PNG. Filename: `recap_{captureScope}_{year}.png` where `captureScope` is `all` or a sanitized game name.
-
-### Multi-currency handling in recap
-
-`primaryCurrency` is picked as `₩` if present, else the first currency seen. The odometer animation and per-month rollups operate in the primary currency; other currencies are summarized as secondary lines on the total slide. If you change this rule, update both the total slide and the monthly aggregation together — they must agree on the same primary.
-
-### Mid-year / in-progress detection
-
-When the selected year equals the current calendar year (`year === new Date().getFullYear()`), intro/total/outro/capture copy switches to mid-year wording ("진행 중", "지금까지", "남은 한 해도", "중간 결산", "누적 합계"). This branch is the single touchpoint — `isInProgress` is computed once in `startRecapSequence` and propagated to slides that need it.
 
 ## Unclassified items: auto-suggestion + raw list
 
